@@ -1,3 +1,39 @@
+
+<script lang="ts">
+  import ChainSelect from "$lib/components/ChainSelect.svelte";
+  import ChatBlock from "$lib/components/ChatBlock.svelte";
+  import ChatFooter from "$lib/components/ChatFooter.svelte";
+  import ChatHeader from "$lib/components/ChatHeader.svelte";
+  import ConnectWallet from "$lib/components/ConnectWallet.svelte";
+  import { testnet } from '@soroban-react/chains';
+  import { freighter } from '@soroban-react/freighter';
+  import type { ChainMetadata, Connector } from "@soroban-react/types";
+  import deployments from "$lib/contract-deployments.json";
+  import { sorobanStore } from "$lib/store/soroban";
+  import {onMount } from "svelte"
+  import SorobanProvider from "$lib/components/SorobanProvider.svelte";
+
+  const chains: ChainMetadata[] = [testnet];
+  const connectors: Connector[] = [freighter()];
+  const appName = "Soroban Demo - Nuxt";
+
+  const lastMsgUsername = "Anon";
+  const lastMessage = "part 2";
+
+  onMount(() => {
+    sorobanStore.update((prev) => {
+      return {
+        ...prev,
+        chains,
+        appName,
+        activeChain: testnet,
+        connectors,
+        deployments
+      }
+    })
+  });
+</script>
+
 <svelte:head>
 	<title>Soroban Demo - SvelteKit</title>
 	<meta name="description" content="Soroban Demo - SvelteKit" />
@@ -8,6 +44,7 @@
 </svelte:head>
 
 <main class="min-h-[100vh] flex flex-col items-center gap-4 justify-center">
+  <SorobanProvider>
     <div class="flex gap-2 justify-center">
       <ChainSelect />
       <ConnectWallet />
@@ -27,16 +64,5 @@
         <ChatFooter />
       </div>
     </div>
+  </SorobanProvider>
 </main>
-
-<script lang="ts">
-  import ChainSelect from "$lib/components/ChainSelect.svelte";
-  import ChatBlock from "$lib/components/ChatBlock.svelte";
-  import ChatFooter from "$lib/components/ChatFooter.svelte";
-  import ChatHeader from "$lib/components/ChatHeader.svelte";
-  import ConnectWallet from "$lib/components/ConnectWallet.svelte";
-
-  const lastMsgUsername = "Anon";
-  const lastMessage = "part 2";
-
-</script>
