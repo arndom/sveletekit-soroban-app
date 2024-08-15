@@ -16,6 +16,7 @@
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
 		"@types/eslint": "^9.6.0",
 		"autoprefixer": "^10.4.19",
+		"daisyui": "^4.12.10",
 		"eslint": "^9.0.0",
 		"eslint-plugin-svelte": "^2.36.0",
 		"globals": "^15.0.0",
@@ -27,5 +28,11 @@
 		"typescript-eslint": "^8.0.0",
 		"vite": "^5.0.3"
 	},
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"@soroban-react/chains": "^9.1.13",
+		"@soroban-react/freighter": "^9.1.13",
+		"@soroban-react/types": "^9.1.13",
+		"@stellar/stellar-sdk": "^12.2.0"
+	}
 }

@@ -1,3 +1,28 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+
+html, body {
+  font-family: 'Inter', sans-serif;
+}
+
+.chat {
+  @apply py-4
+}
+
+.chat-bubble {
+  @apply text-sm;
+}
+
+.chat-block {
+  @apply flex flex-col overflow-auto mb-[64px];
+}
+
+.chat-container {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.chat-container::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
