@@ -45,6 +45,6 @@ const getDefaults = () => {
   };
 
   return values;
-}
+};
 
-export const sorobanStore = writable<SorobanContextType>(getDefaults())
+export const sorobanStore = writable<SorobanContextType>(getDefaults());

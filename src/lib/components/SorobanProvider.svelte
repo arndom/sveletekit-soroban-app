@@ -311,13 +311,10 @@
     checkForNetworkChanges();
   });
 
-
   onDestroy(() => {
     if (addressChangeIntervalID != null) clearTimeout(addressChangeIntervalID)
     if (networkChangeIntervalID != null) clearTimeout(addressChangeIntervalID)
   })
-
-
 </script>
 
 <slot />

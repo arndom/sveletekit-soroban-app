@@ -28,7 +28,7 @@
   <p>
     Greeter -
     <a href={explorerLink} target="_blank" class="underline underline-offset-4">
-      Explore link
+      Explore Contract
     </a>
   </p>
 </div>

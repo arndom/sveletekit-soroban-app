@@ -1,3 +1,3 @@
 import { writable } from "svelte/store";
 
-export const lastMessage = writable('');
+export const lastMessage = writable("...");
