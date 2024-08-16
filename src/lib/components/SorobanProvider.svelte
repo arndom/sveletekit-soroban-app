@@ -3,7 +3,7 @@
   import * as StellarSdk from '@stellar/stellar-sdk'
   import type { Connector, WalletChain } from "@soroban-react/types";
   import { sorobanStore } from "$lib/store/soroban";
-  import {  onMount } from "svelte";
+  import {  afterUpdate, onDestroy, onMount } from "svelte";
 
   let isConnectedRef = false;
 
@@ -71,10 +71,10 @@
               // Now we can track that the wallet is finally connected
               isConnectedRef = true
 
-              // mySorobanContext.value.activeChain = activeChain
-              // mySorobanContext.value.address = address
-              // mySorobanContext.value.server = newServer
-              // mySorobanContext.value.serverHorizon = newServerHorizion
+              // $sorobanStore.activeChain = activeChain
+              // $sorobanStore.address = address
+              // $sorobanStore.server = newServer
+              // $sorobanStore.serverHorizon = newServerHorizion
 
               sorobanStore.update((prev) => ({
                 ...prev,
@@ -96,7 +96,7 @@
               // Now we can track that the wallet is finally connected
               isConnectedRef = true
 
-              // mySorobanContext.value.address = address
+              // $sorobanStore.address = address
 
               sorobanStore.update((prev) => ({
                 ...prev,
@@ -139,13 +139,6 @@
             serverHorizon = fromURLToHorizonServer(_activeChain.networkUrl)
           }
 
-          console.log({
-            server,
-            serverHorizon,
-            activeChain: _activeChain
-
-          })
-
           sorobanStore.update((prev) => ({
             ...prev,
             server,
@@ -173,6 +166,157 @@
         }
     }))
   });
+
+  console.log(
+    'SorobanProvider: Active connector is ',
+    activeConnector?.name
+  );
+
+  // type shoud be NodeJS.Timeout but its suprisignly unavailable
+  let addressChangeIntervalID: any = null;
+  let networkChangeIntervalID: any = null;
+
+  /**
+   * Checks for address change in soroban store on every update change
+  */
+  afterUpdate(() => {
+    // If it turns out that requesting an update from Freighter is too taxing,
+    // then this could be increased. Humans perceive 100ms response times as instantaneous
+    // (source: https://www.pubnub.com/blog/how-fast-is-realtime-human-perception-and-technology/)
+    // but you also have to consider the re-render time of components.
+    const freighterCheckIntervalMs = 200
+
+    async function checkForAddressChanges() {
+      // Returns if not installed / not active / not connected (TODO: currently always isConnected=true)
+      if (
+        !$sorobanStore.activeConnector ||
+        !$sorobanStore.activeConnector.isConnected() ||
+        !isConnectedRef ||
+        !$sorobanStore.activeChain
+      )
+        return
+      // For now we can only do this with freighter. xBull doesn't handle the repeated call well.
+      else if ($sorobanStore.activeConnector.id !== 'freighter') {
+        return
+      } else {
+        let hasNoticedWalletUpdate = false
+
+        try {
+          // NOTICE: If the user logs out from or uninstalls the Freighter extension while they are connected
+          // on this site, then a dialog will appear asking them to sign in again. We need a way to ask Freighter
+          // if there is _any_ connected user, without actually asking them to sign in. Unfortunately, that is not
+          // supported at this time; but it would be easy to submit a PR to the extension to add support for it.
+          let address = await $sorobanStore.activeConnector?.getPublicKey()
+
+          // TODO: If you want to know when the user has disconnected, then you can set a timeout for getPublicKey.
+          // If it doesn't return in X milliseconds, you can be pretty confident that they aren't connected anymore.
+
+          if ($sorobanStore.address !== address) {
+            console.log(
+              'SorobanProvider: address changed from:',
+              $sorobanStore.address,
+              ' to: ',
+              address
+            )
+            hasNoticedWalletUpdate = true
+
+            console.log('SorobanProvider: reconnecting')
+
+            sorobanStore.update((prev) => ({
+              ...prev,
+              address,
+            }));
+          }
+        } catch (error) {
+          // I would recommend keeping the try/catch so that any exceptions in this async function
+          // will get handled. Otherwise React could complain. I believe that eventually it may cause huge
+          // problems, but that might be a NodeJS specific approach to exceptions not handled in promises.
+
+          console.error('SorobanProvider: error: ', error)
+        } finally {
+          if (!hasNoticedWalletUpdate)
+            addressChangeIntervalID = setTimeout(
+              checkForAddressChanges,
+              freighterCheckIntervalMs
+            )
+        }
+      }
+    }
+
+    checkForAddressChanges();
+  });
+
+  /**
+   * Checks for network change in soroban store on every update change
+  */
+  afterUpdate(() => {
+    const freighterCheckIntervalMs = 200
+
+    async function checkForNetworkChanges() {
+      // Returns if not installed / not active / not connected (TODO: currently always isConnected=true)
+      if (
+        !$sorobanStore.activeConnector ||
+        !$sorobanStore.activeConnector.isConnected() ||
+        !isConnectedRef ||
+        !$sorobanStore.activeChain
+      )
+        return
+      // For now we can only do this with freighter. xBull doesn't have the getNetworkDetails method exposed.
+      else if ($sorobanStore.activeConnector.id !== 'freighter') {
+        return
+      } else {
+        let hasNoticedWalletUpdate = false
+
+        try {
+          let networkDetails =
+            await $sorobanStore.activeConnector.getNetworkDetails()
+
+          //TODO: TEMP FIX while waiting for freighter to fix soroban public rpc https://github.com/stellar/freighter/issues/1335
+          if (networkDetails.sorobanRpcUrl === "http://soroban-rpc-pubnet-prd.soroban-rpc-pubnet-prd.svc.cluster.local:8000") {
+            networkDetails.sorobanRpcUrl = "https://mainnet.stellar.validationcloud.io/v1/XFb5Lma6smizBnnRPEgYMbuNm0K3FWzJ7854GNSQ2EY"
+          }
+          let newActiveChain = networkToActiveChain(networkDetails, chains)
+
+          // We check that we have a valid network details and not a blank one like the one xbull connector would return
+          if (
+            networkDetails.network &&
+            (newActiveChain.networkPassphrase !==
+              $sorobanStore.activeChain.networkPassphrase ||
+              newActiveChain?.sorobanRpcUrl !==
+              $sorobanStore?.activeChain?.sorobanRpcUrl)
+          ) {
+            console.log(
+              'SorobanProvider: network changed from:',
+              $sorobanStore.activeChain.networkPassphrase,
+              ' to: ',
+              newActiveChain.networkPassphrase
+            )
+            hasNoticedWalletUpdate = true
+
+            $sorobanStore.setActiveChain &&
+              $sorobanStore.setActiveChain(newActiveChain)
+          }
+        } catch (error) {
+          console.error('SorobanProvider: error: ', error)
+        } finally {
+          if (!hasNoticedWalletUpdate)
+            networkChangeIntervalID = setTimeout(
+              checkForNetworkChanges,
+              freighterCheckIntervalMs
+            )
+        }
+      }
+    }
+
+    checkForNetworkChanges();
+  });
+
+
+  onDestroy(() => {
+    if (addressChangeIntervalID != null) clearTimeout(addressChangeIntervalID)
+    if (networkChangeIntervalID != null) clearTimeout(addressChangeIntervalID)
+  })
+
 
 </script>
 

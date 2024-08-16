@@ -10,6 +10,8 @@
   import type { ChainMetadata, Connector } from "@soroban-react/types";
   import deployments from "$lib/contract-deployments.json";
   import { sorobanStore } from "$lib/store/soroban";
+  import { contractID } from "$lib/store/contract";
+  import { lastMessage } from "$lib/store/message";
   import {onMount } from "svelte"
   import SorobanProvider from "$lib/components/SorobanProvider.svelte";
 
@@ -18,7 +20,6 @@
   const appName = "Soroban Demo - Nuxt";
 
   const lastMsgUsername = "Anon";
-  const lastMessage = "part 2";
 
   onMount(() => {
     sorobanStore.update((prev) => {
@@ -31,6 +32,8 @@
         deployments
       }
     })
+
+    contractID.set('greeting')
   });
 </script>
 
@@ -57,7 +60,7 @@
         <div class="chat-block">
           <div class="chat chat-end">
             <div class="chat-header mb-1">Last msg sent via contract</div>
-            <ChatBlock username={lastMsgUsername} {lastMessage} />
+            <ChatBlock username={lastMsgUsername} lastMessage={$lastMessage} />
           </div>
         </div>
 
