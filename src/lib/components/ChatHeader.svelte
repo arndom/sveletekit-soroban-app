@@ -33,4 +33,4 @@
   </p>
 </div>
 
-<div class="h-[60px]"></div>
+<div class="h-[60px]" />
